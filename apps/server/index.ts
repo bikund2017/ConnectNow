@@ -2,10 +2,9 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { randomBytes } from 'crypto';
-import path from 'path';
-import fs from 'fs';
 import multer from 'multer';
 import cors from 'cors';
+import { v2 as cloudinary } from 'cloudinary';
 
 // ============= Types =============
 interface User {
@@ -79,21 +78,16 @@ const io = new Server(httpServer, {
   }
 });
 
-// ============= File Upload Setup =============
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + randomBytes(4).toString('hex');
-    cb(null, uniqueSuffix + '-' + file.originalname);
-  }
+// ============= Cloudinary Setup =============
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dyoe9bvq8',
+  api_key: process.env.CLOUDINARY_API_KEY || '128558117872626',
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'lHb-Pbw-Xf1yih9G_ectDsE9t4I'
 });
+
+// ============= File Upload Setup =============
+// Use memory storage - files are uploaded to Cloudinary, not stored locally
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -113,27 +107,43 @@ const upload = multer({
   }
 });
 
-// Serve uploaded files
-app.use('/uploads', express.static(uploadsDir));
-
-// File upload endpoint
-app.post('/upload', upload.single('file'), (req, res) => {
+// File upload endpoint - uploads to Cloudinary
+app.post('/upload', upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
 
-  const fileUrl = `/uploads/${req.file.filename}`;
-  res.json({
-    url: fileUrl,
-    name: req.file.originalname,
-    size: req.file.size,
-    mimeType: req.file.mimetype
-  });
-});
+  try {
+    // Determine resource type based on mime type
+    const isImage = req.file.mimetype.startsWith('image/');
+    const resourceType = isImage ? 'image' : 'raw';
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', rooms: rooms.size });
+    // Upload to Cloudinary
+    const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: resourceType,
+          folder: 'connectnow',
+          public_id: `${Date.now()}-${randomBytes(4).toString('hex')}`,
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result as { secure_url: string });
+        }
+      );
+      uploadStream.end(req.file!.buffer);
+    });
+
+    res.json({
+      url: result.secure_url,
+      name: req.file.originalname,
+      size: req.file.size,
+      mimeType: req.file.mimetype
+    });
+  } catch (error) {
+    console.error('Cloudinary upload error:', error);
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
 });
 
 // ============= Room Management =============

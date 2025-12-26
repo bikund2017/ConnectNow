@@ -83,7 +83,8 @@ const TypingIndicator = ({ typingUsers }: { typingUsers: string[] }) => {
 
 const FileMessage = ({ file, isOwn }: { file: FileData; isOwn: boolean }) => {
   const isImage = file.mimeType.startsWith('image/');
-  const fileUrl = file.url.startsWith('http') ? file.url : `${SOCKET_URL}${file.url}`;
+  // Cloudinary returns full URLs, no need to prepend SOCKET_URL
+  const fileUrl = file.url;
 
   if (isImage) {
     return (
