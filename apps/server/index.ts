@@ -51,6 +51,7 @@ const httpServer = createServer(app);
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',') || [
   "http://localhost:3000",
   "https://connectnow.vercel.app",
+  "https://connectnow-drab.vercel.app",
   "https://real-time-chat-liard.vercel.app",
   "https://real-time-chat-amritwt.vercel.app"
 ];
