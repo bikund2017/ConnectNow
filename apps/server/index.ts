@@ -5,6 +5,7 @@ import { randomBytes } from 'crypto';
 import multer from 'multer';
 import cors from 'cors';
 import { v2 as cloudinary } from 'cloudinary';
+import mongoose from 'mongoose';
 
 // ============= Types =============
 interface User {
@@ -16,7 +17,7 @@ interface User {
   joinedAt: Date;
 }
 
-interface Message {
+interface MessageData {
   id: string;
   content: string;
   senderId: string;
@@ -36,11 +37,39 @@ interface RoomData {
   name?: string;
   description?: string;
   users: Map<string, User>;
-  messages: Message[];
+  messages: MessageData[];
   typingUsers: Set<string>;
   lastActive: number;
   createdAt: Date;
 }
+
+// ============= MongoDB Schemas =============
+const messageSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  roomCode: { type: String, required: true, index: true },
+  content: { type: String, default: '' },
+  senderId: { type: String, required: true },
+  sender: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+  type: { type: String, enum: ['text', 'file', 'image', 'system'], default: 'text' },
+  file: {
+    url: String,
+    name: String,
+    size: Number,
+    mimeType: String
+  }
+});
+
+const roomSchema = new mongoose.Schema({
+  code: { type: String, required: true, unique: true, index: true },
+  name: { type: String },
+  description: { type: String },
+  createdAt: { type: Date, default: Date.now },
+  lastActive: { type: Date, default: Date.now }
+});
+
+const Message = mongoose.model('Message', messageSchema);
+const Room = mongoose.model('Room', roomSchema);
 
 // ============= Configuration =============
 const app = express();
@@ -67,7 +96,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
 });
 
@@ -77,6 +107,16 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"]
   }
 });
+
+// ============= MongoDB Connection =============
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.warn('Warning: MONGODB_URI not configured. Message history will not persist.');
+} else {
+  mongoose.connect(MONGODB_URI)
+    .then(() => console.log('Connected to MongoDB'))
+    .catch(err => console.error('MongoDB connection error:', err));
+}
 
 // ============= Cloudinary Setup =============
 if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
@@ -150,6 +190,64 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   }
 });
 
+// ============= Helper Functions =============
+async function saveMessageToDb(roomCode: string, message: MessageData) {
+  if (mongoose.connection.readyState !== 1) return;
+  try {
+    await Message.create({ ...message, roomCode });
+  } catch (error) {
+    console.error('Error saving message:', error);
+  }
+}
+
+async function getMessagesFromDb(roomCode: string): Promise<MessageData[]> {
+  if (mongoose.connection.readyState !== 1) return [];
+  try {
+    const messages = await Message.find({ roomCode })
+      .sort({ timestamp: 1 })
+      .limit(100)
+      .lean();
+    return messages.map(m => ({
+      id: m.id,
+      content: m.content || '',
+      senderId: m.senderId,
+      sender: m.sender,
+      timestamp: m.timestamp,
+      type: m.type as MessageData['type'],
+      file: m.file
+    }));
+  } catch (error) {
+    console.error('Error loading messages:', error);
+    return [];
+  }
+}
+
+async function getOrCreateRoom(roomCode: string, name?: string): Promise<boolean> {
+  if (mongoose.connection.readyState !== 1) return true;
+  try {
+    const existing = await Room.findOne({ code: roomCode });
+    if (existing) {
+      await Room.updateOne({ code: roomCode }, { lastActive: new Date() });
+      return true;
+    }
+    await Room.create({ code: roomCode, name: name || `Room ${roomCode}` });
+    return true;
+  } catch (error) {
+    console.error('Error with room:', error);
+    return false;
+  }
+}
+
+async function roomExistsInDb(roomCode: string): Promise<boolean> {
+  if (mongoose.connection.readyState !== 1) return false;
+  try {
+    const room = await Room.findOne({ code: roomCode });
+    return !!room;
+  } catch (error) {
+    return false;
+  }
+}
+
 // ============= Room Management =============
 const rooms = new Map<string, RoomData>();
 
@@ -158,8 +256,12 @@ io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
   // Create a new room
-  socket.on('create-room', (data?: { name?: string; description?: string }) => {
+  socket.on('create-room', async (data?: { name?: string; description?: string }) => {
     const roomCode = randomBytes(3).toString('hex').toUpperCase();
+
+    // Save room to database
+    await getOrCreateRoom(roomCode, data?.name);
+
     const roomData: RoomData = {
       id: roomCode,
       name: data?.name || `Room ${roomCode}`,
@@ -176,17 +278,34 @@ io.on('connection', (socket) => {
   });
 
   // Join an existing room
-  socket.on('join-room', (data) => {
+  socket.on('join-room', async (data) => {
     const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
     const roomCode = parsedData.roomId?.toUpperCase();
     const userName = parsedData.name || 'Anonymous';
     const userId = parsedData.userId || socket.id;
 
-    const room = rooms.get(roomCode);
+    let room = rooms.get(roomCode);
 
+    // If room not in memory, check database
     if (!room) {
-      socket.emit('error', 'Room not found');
-      return;
+      const existsInDb = await roomExistsInDb(roomCode);
+      if (existsInDb) {
+        // Restore room from database
+        const dbMessages = await getMessagesFromDb(roomCode);
+        room = {
+          id: roomCode,
+          name: `Room ${roomCode}`,
+          users: new Map<string, User>(),
+          messages: dbMessages,
+          typingUsers: new Set<string>(),
+          lastActive: Date.now(),
+          createdAt: new Date()
+        };
+        rooms.set(roomCode, room);
+      } else {
+        socket.emit('error', 'Room not found');
+        return;
+      }
     }
 
     // Create user profile
@@ -219,7 +338,7 @@ io.on('connection', (socket) => {
     });
 
     // Add system message
-    const systemMessage: Message = {
+    const systemMessage: MessageData = {
       id: randomBytes(4).toString('hex'),
       content: `${userName} joined the room`,
       senderId: 'system',
@@ -228,13 +347,14 @@ io.on('connection', (socket) => {
       type: 'system'
     };
     room.messages.push(systemMessage);
+    await saveMessageToDb(roomCode, systemMessage);
     io.to(roomCode).emit('new-message', systemMessage);
 
     console.log(`User ${userName} joined room ${roomCode}`);
   });
 
   // Send a message
-  socket.on('send-message', ({ roomCode, message, userId, name, file }) => {
+  socket.on('send-message', async ({ roomCode, message, userId, name, file }) => {
     const room = rooms.get(roomCode);
     if (room) {
       room.lastActive = Date.now();
@@ -248,7 +368,7 @@ io.on('connection', (socket) => {
         })
       });
 
-      const messageData: Message = {
+      const messageData: MessageData = {
         id: randomBytes(4).toString('hex'),
         content: message,
         senderId: userId,
@@ -258,6 +378,7 @@ io.on('connection', (socket) => {
         file: file
       };
       room.messages.push(messageData);
+      await saveMessageToDb(roomCode, messageData);
       io.to(roomCode).emit('new-message', messageData);
     }
   });
@@ -314,8 +435,8 @@ io.on('connection', (socket) => {
   });
 
   // Handle disconnection
-  socket.on('disconnect', () => {
-    rooms.forEach((room, roomCode) => {
+  socket.on('disconnect', async () => {
+    for (const [roomCode, room] of rooms) {
       if (room.users.has(socket.id)) {
         const user = room.users.get(socket.id);
         room.users.delete(socket.id);
@@ -330,7 +451,7 @@ io.on('connection', (socket) => {
 
         // Add system message
         if (user) {
-          const systemMessage: Message = {
+          const systemMessage: MessageData = {
             id: randomBytes(4).toString('hex'),
             content: `${user.name} left the room`,
             senderId: 'system',
@@ -339,26 +460,26 @@ io.on('connection', (socket) => {
             type: 'system'
           };
           room.messages.push(systemMessage);
+          await saveMessageToDb(roomCode, systemMessage);
           io.to(roomCode).emit('new-message', systemMessage);
         }
 
-        // Clean up empty rooms
+        // Keep room in memory for a while, but don't delete from DB
         if (room.users.size === 0) {
-          console.log(`Deleting empty room: ${roomCode}`);
-          rooms.delete(roomCode);
+          console.log(`Room ${roomCode} is now empty (keeping in memory for 1 hour)`);
         }
       }
-    });
+    }
     console.log('User disconnected:', socket.id);
   });
 });
 
-// ============= Room Cleanup =============
+// ============= Room Cleanup (in-memory only) =============
 setInterval(() => {
   const now = Date.now();
   rooms.forEach((room, roomCode) => {
     if (room.users.size === 0 && now - room.lastActive > 3600000) {
-      console.log(`Cleaning up inactive room: ${roomCode}`);
+      console.log(`Cleaning up inactive room from memory: ${roomCode}`);
       rooms.delete(roomCode);
     }
   });

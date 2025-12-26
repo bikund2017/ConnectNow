@@ -1,7 +1,7 @@
 {
   "name": "connectnow-server",
   "version": "1.0.0",
-  "description": "ConnectNow - Real-time chat backend with Socket.io",
+  "description": "ConnectNow - Real-time chat backend with Socket.io and MongoDB",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -22,6 +22,7 @@
     "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
     "express": "^4.21.1",
+    "mongoose": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "socket.io": "^4.8.1"
   },
