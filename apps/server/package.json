@@ -1,7 +1,7 @@
 {
   "name": "connectnow-server",
   "version": "1.0.0",
-  "description": "ConnectNow - Real-time chat backend with Socket.io and MongoDB",
+  "description": "ConnectNow - Real-time chat backend with Socket.io",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -13,8 +13,7 @@
   "keywords": [
     "chat",
     "realtime",
-    "socket.io",
-    "mongodb"
+    "socket.io"
   ],
   "author": "Bikund Kumar",
   "license": "MIT",

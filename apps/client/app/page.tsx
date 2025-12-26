@@ -35,7 +35,6 @@ interface User {
   avatar?: string;
 }
 
-/* eslint-disable no-unused-vars */
 interface ServerToClientEvents {
   'room-created': (code: string) => void;
   'joined-room': (data: { roomCode: string; messages: Message[]; roomName?: string }) => void;
@@ -272,11 +271,11 @@ export default function Page() {
       setMessages((prev) => [...prev, message]);
     });
 
-    socket.on('user-joined', ({ userCount, users }) => {
+    socket.on('user-joined', ({ users }) => {
       setUsers(users);
     });
 
-    socket.on('user-left', ({ userCount, users }) => {
+    socket.on('user-left', ({ users }) => {
       setUsers(users);
     });
 

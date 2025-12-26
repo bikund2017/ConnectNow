@@ -79,10 +79,14 @@ const io = new Server(httpServer, {
 });
 
 // ============= Cloudinary Setup =============
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  console.warn('Warning: Cloudinary credentials not configured. File uploads will fail.');
+}
+
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dyoe9bvq8',
-  api_key: process.env.CLOUDINARY_API_KEY || '128558117872626',
-  api_secret: process.env.CLOUDINARY_API_SECRET || 'lHb-Pbw-Xf1yih9G_ectDsE9t4I'
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 // ============= File Upload Setup =============
@@ -148,16 +152,6 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
 // ============= Room Management =============
 const rooms = new Map<string, RoomData>();
-
-// Helper to get user's room
-const getUserRoom = (socketId: string): { roomCode: string; room: RoomData } | null => {
-  for (const [roomCode, room] of rooms) {
-    if (room.users.has(socketId)) {
-      return { roomCode, room };
-    }
-  }
-  return null;
-};
 
 // ============= Socket Events =============
 io.on('connection', (socket) => {
