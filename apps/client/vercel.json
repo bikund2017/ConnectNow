@@ -1,5 +1,5 @@
 {
-    "buildCommand": "npm run build",
+    "buildCommand": "npx fix-react2shell-next --yes && npm run build",
     "outputDirectory": ".next",
     "framework": "nextjs",
     "installCommand": "npm install"
