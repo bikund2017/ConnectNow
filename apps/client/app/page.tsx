@@ -56,7 +56,7 @@ interface ClientToServerEvents {
   'get-users': (data: { roomCode: string }) => void;
 }
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
+const SOCKET_URL = (process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000').replace(/\/$/, '');
 const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SOCKET_URL);
 
 // ============= Components =============
