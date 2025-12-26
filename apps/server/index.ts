@@ -214,7 +214,12 @@ async function getMessagesFromDb(roomCode: string): Promise<MessageData[]> {
       sender: m.sender,
       timestamp: m.timestamp,
       type: m.type as MessageData['type'],
-      file: m.file
+      file: m.file && m.file.url ? {
+        url: m.file.url,
+        name: m.file.name || '',
+        size: m.file.size || 0,
+        mimeType: m.file.mimeType || ''
+      } : undefined
     }));
   } catch (error) {
     console.error('Error loading messages:', error);
