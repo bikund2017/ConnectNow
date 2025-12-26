@@ -1,7 +1,7 @@
 {
   "name": "connectnow",
   "description": "A real-time chat application with temporary rooms, typing indicators, file sharing, and user profiles",
-  "author": "BK",
+  "author": "Bikund Kumar",
   "license": "MIT",
   "private": true,
   "scripts": {
