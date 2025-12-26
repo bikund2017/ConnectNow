@@ -1,75 +1,78 @@
 # ConnectNow
 
-Real-time chat with temporary rooms, typing indicators, and file sharing.
+Real-time chat application with instant messaging and file sharing.
+
+🔗 **Live Demo:** [connectnow-drab.vercel.app](https://connectnow-drab.vercel.app)
 
 ## Features
 
-- 💬 **Instant Messaging** — Real-time delivery with Socket.io
-- 🔄 **Typing Indicators** — See when others are typing
-- 📎 **File Sharing** — Images and documents (up to 10MB)
-- 👥 **User Profiles** — Avatars and online status
-- 🏠 **Temporary Rooms** — Create/join with shareable codes
-- 🌙 **Dark/Light Mode** — System-aware theming
+- 💬 Real-time messaging with typing indicators
+- 📁 File & image sharing
+- � Multi-user chat rooms
+- 📱 Mobile-friendly with auto-rejoin
+- � Message history (persists 7 days)
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | Next.js 15, React 19, TypeScript |
+| **Styling** | Tailwind CSS, shadcn/ui |
+| **Backend** | Node.js, Express, Socket.io |
+| **Database** | MongoDB Atlas |
+| **File Storage** | Cloudinary |
+| **Deployment** | Vercel (client), Render (server) |
+
+## Architecture
+
+```
+┌─────────────┐     WebSocket      ┌─────────────┐
+│   Client    │◄──────────────────►│   Server    │
+│  (Next.js)  │                    │  (Express)  │
+│   Vercel    │                    │   Render    │
+└─────────────┘                    └──────┬──────┘
+                                          │
+                    ┌─────────────────────┼─────────────────────┐
+                    │                     │                     │
+              ┌─────▼─────┐        ┌──────▼──────┐       ┌──────▼──────┐
+              │  MongoDB  │        │ Cloudinary  │       │   Socket.io │
+              │   Atlas   │        │    CDN      │       │   (Rooms)   │
+              └───────────┘        └─────────────┘       └─────────────┘
+```
 
 ## Quick Start
 
 ```bash
+# Install dependencies
 npm install
-npm run dev
+
+# Run client (localhost:3000)
+cd apps/client && npm run dev
+
+# Run server (localhost:4000)
+cd apps/server && npm run dev
 ```
 
-- **Client**: http://localhost:3000
-- **Server**: http://localhost:4000
+## Environment Variables
+
+### Server (Render)
+```
+MONGODB_URI=mongodb+srv://...
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+ALLOWED_ORIGINS=https://your-domain.vercel.app
+```
+
+### Client (Vercel)
+```
+NEXT_PUBLIC_SOCKET_URL=https://your-server.onrender.com
+```
+
+## Author
+
+**Bikund Kumar**
 
 ---
 
-## Production Deployment
-
-### Deploy Server to Render
-
-1. Push code to GitHub
-2. On [Render](https://render.com), create **New Web Service**
-3. Connect your repo
-4. Set **Root Directory**: `apps/server`
-5. **Build Command**: `npm install && npm run build`
-6. **Start Command**: `npm start`
-7. Add environment variable:
-   ```
-   ALLOWED_ORIGINS=https://your-client-domain.vercel.app
-   ```
-8. Deploy
-
-### Deploy Client to Vercel
-
-1. On [Vercel](https://vercel.com), import project from GitHub
-2. Set **Root Directory**: `apps/client`
-3. Add environment variable:
-   ```
-   NEXT_PUBLIC_SOCKET_URL=https://your-server.onrender.com
-   ```
-4. Deploy
-
----
-
-## Project Structure
-
-```
-apps/
-├── client/     # Next.js frontend
-└── server/     # Express + Socket.io backend
-packages/
-└── ui/         # Shared components
-```
-
-## Tech Stack
-
-| Frontend | Backend |
-|----------|---------|
-| Next.js 15 | Express |
-| React 19 | Socket.io |
-| Tailwind CSS | Multer |
-| shadcn/ui | TypeScript |
-
-## License
-
-MIT © BK
+Built with ❤️ using Socket.io and Next.js
