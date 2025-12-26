@@ -10,7 +10,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { MessageCircleIcon, Loader2, Copy, Paperclip, X, FileIcon, Users, Download } from "lucide-react";
 import { toast } from "sonner"
 
-// ============= Types =============
+// Types
 interface FileData {
   url: string;
   name: string;
@@ -58,7 +58,7 @@ interface ClientToServerEvents {
 const SOCKET_URL = (process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000').replace(/\/$/, '');
 const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SOCKET_URL);
 
-// ============= Components =============
+// Components
 const TypingIndicator = ({ typingUsers }: { typingUsers: string[] }) => {
   if (typingUsers.length === 0) return null;
 
@@ -190,7 +190,7 @@ const MessageGroup = ({ messages, userId }: { messages: Message[], userId: strin
   );
 };
 
-// ============= Main Component =============
+// Main Component
 export default function Page() {
   const [roomCode, setRoomCode] = useState<string>('');
   const [inputCode, setInputCode] = useState<string>('');

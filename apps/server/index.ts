@@ -7,7 +7,7 @@ import cors from 'cors';
 import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
 
-// ============= Types =============
+// Types
 interface User {
   id: string;
   socketId: string;
@@ -43,7 +43,7 @@ interface RoomData {
   createdAt: Date;
 }
 
-// ============= MongoDB Schemas =============
+// MongoDB Schemas
 const messageSchema = new mongoose.Schema({
   id: { type: String, required: true },
   roomCode: { type: String, required: true, index: true },
@@ -77,7 +77,7 @@ roomSchema.index({ lastActive: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
 const Message = mongoose.model('Message', messageSchema);
 const Room = mongoose.model('Room', roomSchema);
 
-// ============= Configuration =============
+// Configuration
 const app = express();
 const httpServer = createServer(app);
 
@@ -114,7 +114,7 @@ const io = new Server(httpServer, {
   }
 });
 
-// ============= MongoDB Connection =============
+// MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
   console.warn('Warning: MONGODB_URI not configured. Message history will not persist.');
@@ -124,7 +124,7 @@ if (!MONGODB_URI) {
     .catch(err => console.error('MongoDB connection error:', err));
 }
 
-// ============= Cloudinary Setup =============
+// Cloudinary Setup
 if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
   console.warn('Warning: Cloudinary credentials not configured. File uploads will fail.');
 }
@@ -259,10 +259,10 @@ async function roomExistsInDb(roomCode: string): Promise<boolean> {
   }
 }
 
-// ============= Room Management =============
+// Room Management
 const rooms = new Map<string, RoomData>();
 
-// ============= Socket Events =============
+// Socket Events
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
@@ -485,7 +485,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// ============= Room Cleanup (in-memory only) =============
+// Room Cleanup (in-memory only)
 setInterval(() => {
   const now = Date.now();
   rooms.forEach((room, roomCode) => {
@@ -496,7 +496,7 @@ setInterval(() => {
   });
 }, 3600000);
 
-// ============= Start Server =============
+// Start Server 
 const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
   console.log(`ConnectNow server running on port ${PORT}`);
