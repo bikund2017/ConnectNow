@@ -218,7 +218,7 @@ export default function Page() {
     scrollToBottom();
   }, [messages]);
 
-  // Initialize user ID
+  // Initialize user ID and check for saved session
   useEffect(() => {
     const storedUserId = localStorage.getItem('chatUserId');
     const newUserId = storedUserId || crypto.randomUUID();
@@ -228,6 +228,23 @@ export default function Page() {
     }
 
     setUserId(newUserId);
+
+    // Check for saved room session (auto-rejoin)
+    const savedRoom = localStorage.getItem('chatRoomCode');
+    const savedName = localStorage.getItem('chatUserName');
+
+    if (savedRoom && savedName) {
+      setName(savedName);
+      setInputCode(savedRoom);
+      // Auto-join after a short delay to ensure socket is connected
+      setTimeout(() => {
+        socket.emit('join-room', JSON.stringify({
+          roomId: savedRoom.toUpperCase(),
+          name: savedName,
+          userId: newUserId
+        }));
+      }, 500);
+    }
   }, []);
 
   // Handle typing events with debounce
@@ -264,6 +281,9 @@ export default function Page() {
       setMessages(messages);
       setConnected(true);
       setInputCode('');
+      // Save session to localStorage for auto-rejoin
+      localStorage.setItem('chatRoomCode', roomCode);
+      localStorage.setItem('chatUserName', name || localStorage.getItem('chatUserName') || '');
       toast.success('Joined room successfully!');
     });
 
@@ -292,6 +312,9 @@ export default function Page() {
       setIsLoading(false);
       if (error === 'Room not found' || error === 'Room is full') {
         setInputCode('');
+        // Clear saved session on error
+        localStorage.removeItem('chatRoomCode');
+        localStorage.removeItem('chatUserName');
       }
     });
 
