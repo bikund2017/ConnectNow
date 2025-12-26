@@ -16,7 +16,7 @@
     "socket.io",
     "mongodb"
   ],
-  "author": "BK",
+  "author": "Bikund Kumar",
   "license": "MIT",
   "dependencies": {
     "@types/socket.io": "^3.0.2",

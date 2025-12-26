@@ -2,7 +2,7 @@
   "name": "connectnow-client",
   "description": "ConnectNow - Real-time chat frontend",
   "version": "1.0.0",
-  "author": "BK",
+  "author": "Bikund Kumar",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",

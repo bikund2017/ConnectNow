@@ -50,10 +50,10 @@ const httpServer = createServer(app);
 // Production CORS origins (add your domains here)
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',') || [
   "http://localhost:3000",
-  "https://connectnow.vercel.app",
   "https://connectnow-drab.vercel.app",
-  "https://real-time-chat-liard.vercel.app",
-  "https://real-time-chat-amritwt.vercel.app"
+  "https://connectnow-bca23127-3897s-projects.vercel.app",
+  "https://connectnow-git-master-bca23127-3897s-projects.vercel.app",
+  "https://connectnow-xmsxncoil-bca23127-3897s-projects.vercel.app"
 ];
 
 // Enable CORS for REST endpoints
