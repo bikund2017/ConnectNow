@@ -50,7 +50,7 @@ const messageSchema = new mongoose.Schema({
   content: { type: String, default: '' },
   senderId: { type: String, required: true },
   sender: { type: String, required: true },
-  timestamp: { type: Date, default: Date.now },
+  timestamp: { type: Date, default: Date.now, index: true },
   type: { type: String, enum: ['text', 'file', 'image', 'system'], default: 'text' },
   file: {
     url: String,
@@ -60,13 +60,19 @@ const messageSchema = new mongoose.Schema({
   }
 });
 
+// TTL index: auto-delete messages after 7 days
+messageSchema.index({ timestamp: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
+
 const roomSchema = new mongoose.Schema({
   code: { type: String, required: true, unique: true, index: true },
   name: { type: String },
   description: { type: String },
   createdAt: { type: Date, default: Date.now },
-  lastActive: { type: Date, default: Date.now }
+  lastActive: { type: Date, default: Date.now, index: true }
 });
+
+// TTL index: auto-delete rooms after 7 days of inactivity
+roomSchema.index({ lastActive: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
 
 const Message = mongoose.model('Message', messageSchema);
 const Room = mongoose.model('Room', roomSchema);
