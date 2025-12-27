@@ -465,34 +465,49 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle disconnection
+  // Handle disconnection - with grace period for reconnection
   socket.on('disconnect', async () => {
     for (const [roomCode, room] of rooms) {
       if (room.users.has(socket.id)) {
         const user = room.users.get(socket.id);
+        const userId = user?.id;
+
+        // Remove user from room immediately
         room.users.delete(socket.id);
         room.typingUsers.delete(socket.id);
 
-        // Notify remaining users
+        // Notify remaining users about user list change
         const usersList = Array.from(room.users.values());
         io.to(roomCode).emit('user-left', {
           userCount: room.users.size,
           users: usersList.map(u => ({ id: u.id, name: u.name, status: u.status }))
         });
 
-        // Add system message
+        // Wait a grace period before announcing "left the room"
+        // This prevents spam when users briefly disconnect and reconnect
         if (user) {
-          const systemMessage: MessageData = {
-            id: randomBytes(4).toString('hex'),
-            content: `${user.name} left the room`,
-            senderId: 'system',
-            sender: 'System',
-            timestamp: new Date(),
-            type: 'system'
-          };
-          room.messages.push(systemMessage);
-          await saveMessageToDb(roomCode, systemMessage);
-          io.to(roomCode).emit('new-message', systemMessage);
+          setTimeout(async () => {
+            // Check if user has reconnected (same userId in room)
+            const currentRoom = rooms.get(roomCode);
+            if (currentRoom) {
+              const hasReconnected = Array.from(currentRoom.users.values()).some(u => u.id === userId);
+
+              if (!hasReconnected) {
+                // User didn't reconnect, announce they left
+                const systemMessage: MessageData = {
+                  id: randomBytes(4).toString('hex'),
+                  content: `${user.name} left the room`,
+                  senderId: 'system',
+                  sender: 'System',
+                  timestamp: new Date(),
+                  type: 'system'
+                };
+                currentRoom.messages.push(systemMessage);
+                await saveMessageToDb(roomCode, systemMessage);
+                io.to(roomCode).emit('new-message', systemMessage);
+              }
+            }
+          }, 5000); // 5 second grace period
         }
 
         // Keep room in memory for a while, but don't delete from DB
