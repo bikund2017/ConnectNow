@@ -7,7 +7,24 @@ import cors from 'cors';
 import { v2 as cloudinary } from 'cloudinary';
 import mongoose from 'mongoose';
 
+// Constants
+const IS_DEV = process.env.NODE_ENV !== 'production';
+const GRACE_PERIOD_MS = 5000; // Time to wait before announcing user left
+const ROOM_CLEANUP_INTERVAL_MS = 3600000; // 1 hour
+const ROOM_INACTIVE_TIMEOUT_MS = 3600000; // 1 hour
+const MESSAGE_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_MESSAGES_LIMIT = 100;
+
+// Conditional logging utility
+const log = (message: string, ...args: unknown[]) => {
+  if (IS_DEV) {
+    console.log(message, ...args);
+  }
+};
+
 // Types
+
 interface User {
   id: string;
   socketId: string;
@@ -141,7 +158,7 @@ const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: MAX_FILE_SIZE_BYTES },
   fileFilter: (req, file, cb) => {
     // Allow images and common document types
     const allowedTypes = [
@@ -211,7 +228,7 @@ async function getMessagesFromDb(roomCode: string): Promise<MessageData[]> {
   try {
     const messages = await Message.find({ roomCode })
       .sort({ timestamp: 1 })
-      .limit(100)
+      .limit(MAX_MESSAGES_LIMIT)
       .lean();
     return messages.map(m => ({
       id: m.id,
@@ -264,7 +281,7 @@ const rooms = new Map<string, RoomData>();
 
 // Socket Events
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  log('User connected:', socket.id);
 
   // Create a new room
   socket.on('create-room', async (data?: { name?: string; description?: string }) => {
@@ -285,7 +302,7 @@ io.on('connection', (socket) => {
     };
     rooms.set(roomCode, roomData);
     socket.emit('room-created', roomCode);
-    console.log(`Room created: ${roomCode}`);
+    log(`Room created: ${roomCode}`);
   });
 
   // Join an existing room
@@ -381,7 +398,7 @@ io.on('connection', (socket) => {
       io.to(roomCode).emit('new-message', systemMessage);
     }
 
-    console.log(`User ${userName} ${isReconnecting ? 'reconnected to' : 'joined'} room ${roomCode}`);
+    log(`User ${userName} ${isReconnecting ? 'reconnected to' : 'joined'} room ${roomCode}`);
   });
 
   // Send a message
@@ -507,16 +524,16 @@ io.on('connection', (socket) => {
                 io.to(roomCode).emit('new-message', systemMessage);
               }
             }
-          }, 5000); // 5 second grace period
+          }, GRACE_PERIOD_MS);
         }
 
         // Keep room in memory for a while, but don't delete from DB
         if (room.users.size === 0) {
-          console.log(`Room ${roomCode} is now empty (keeping in memory for 1 hour)`);
+          log(`Room ${roomCode} is now empty (keeping in memory for 1 hour)`);
         }
       }
     }
-    console.log('User disconnected:', socket.id);
+    log('User disconnected:', socket.id);
   });
 });
 
@@ -524,12 +541,12 @@ io.on('connection', (socket) => {
 setInterval(() => {
   const now = Date.now();
   rooms.forEach((room, roomCode) => {
-    if (room.users.size === 0 && now - room.lastActive > 3600000) {
-      console.log(`Cleaning up inactive room from memory: ${roomCode}`);
+    if (room.users.size === 0 && now - room.lastActive > ROOM_INACTIVE_TIMEOUT_MS) {
+      log(`Cleaning up inactive room from memory: ${roomCode}`);
       rooms.delete(roomCode);
     }
   });
-}, 3600000);
+}, ROOM_CLEANUP_INTERVAL_MS);
 
 // Start Server 
 const PORT = process.env.PORT || 4000;
