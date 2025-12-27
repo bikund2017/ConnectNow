@@ -8,8 +8,14 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { ServerWakeup } from "@/components/ServerWakeup"
-import { MessageCircleIcon, Loader2, Copy, Paperclip, X, FileIcon, Users, Download } from "lucide-react";
+import { MessageCircleIcon, Loader2, Copy, Paperclip, X, FileIcon, Users, Download, Camera, Upload } from "lucide-react";
 import { toast } from "sonner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 // Types
 interface FileData {
@@ -209,6 +215,7 @@ export default function Page() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isTypingRef = useRef(false);
 
@@ -588,6 +595,7 @@ export default function Page() {
 
                 {/* Message input form */}
                 <form onSubmit={sendMessage} className="flex gap-2">
+                  {/* Hidden file input for uploading files */}
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -595,15 +603,38 @@ export default function Page() {
                     className="hidden"
                     accept="image/*,.pdf,.doc,.docx,.txt"
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                  >
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
+                  {/* Hidden camera input for capturing photos */}
+                  <input
+                    type="file"
+                    ref={cameraInputRef}
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    accept="image/*"
+                    capture="environment"
+                  />
+                  {/* Attachment dropdown menu */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        disabled={isUploading}
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="top">
+                      <DropdownMenuItem onClick={() => cameraInputRef.current?.click()}>
+                        <Camera className="h-4 w-4 mr-2" />
+                        Capture with Camera
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload File
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Input
                     value={message}
                     onChange={handleMessageChange}
