@@ -221,6 +221,7 @@ export default function Page() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isTypingRef = useRef(false);
+  const isCreatingRoomRef = useRef(false); // Guard to prevent duplicate room creation
 
   // Detect mobile device
   useEffect(() => {
@@ -288,7 +289,7 @@ export default function Page() {
 
     // Handle socket connect/reconnect events
     socket.on('connect', rejoinRoom);
-    
+
     // Handle page visibility change (mobile user returns to app)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -296,7 +297,7 @@ export default function Page() {
         setTimeout(rejoinRoom, 500);
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
@@ -331,6 +332,7 @@ export default function Page() {
     socket.on('room-created', (code) => {
       setRoomCode(code);
       setIsLoading(false);
+      isCreatingRoomRef.current = false; // Reset guard for next room creation
       toast.success('Room created successfully!');
     });
 
@@ -368,6 +370,7 @@ export default function Page() {
     socket.on('error', (error) => {
       toast.error(error);
       setIsLoading(false);
+      isCreatingRoomRef.current = false; // Reset guard on error
       if (error === 'Room not found' || error === 'Room is full') {
         setInputCode('');
         // Clear saved session on error
@@ -394,6 +397,30 @@ export default function Page() {
   };
 
   const handleServerReady = () => {
+    // Guard: prevent duplicate room creation calls
+    if (isCreatingRoomRef.current) {
+      console.log('Room creation already in progress, ignoring duplicate call');
+      return;
+    }
+
+    // Check if socket is connected
+    if (!socket.connected) {
+      console.log('Socket not connected, waiting...');
+      const checkConnection = setInterval(() => {
+        if (socket.connected && !isCreatingRoomRef.current) {
+          clearInterval(checkConnection);
+          isCreatingRoomRef.current = true;
+          setIsWakingServer(false);
+          setIsLoading(true);
+          socket.emit('create-room');
+        }
+      }, 100);
+      // Clear after 5 seconds to prevent memory leak
+      setTimeout(() => clearInterval(checkConnection), 5000);
+      return;
+    }
+
+    isCreatingRoomRef.current = true;
     setIsWakingServer(false);
     setIsLoading(true);
     socket.emit('create-room');
