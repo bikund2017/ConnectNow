@@ -1,43 +1,38 @@
-# ConnectNow
+# ConnectNow 💬
 
-Real-time chat application with instant messaging and file sharing.
+A real-time chat application with instant messaging, file sharing, and webcam capture.
 
-🔗 **Live Demo:** [connectnow-drab.vercel.app](https://connectnow-drab.vercel.app)
+**Live Demo:** [connectnow-drab.vercel.app](https://connectnow-drab.vercel.app)
 
 ## Features
 
-- 💬 Real-time messaging with typing indicators
-- 📁 File & image sharing
-- � Multi-user chat rooms
-- 📱 Mobile-friendly with auto-rejoin
-- � Message history (persists 7 days)
+- 🚀 Real-time messaging with Socket.IO
+- 📁 File & image sharing (up to 10MB)
+- 📷 Webcam capture (desktop) & camera capture (mobile)
+- 🌙 Dark/Light theme toggle
+- 🔄 Auto-reconnection with message sync
+- 💾 Message history persistence
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | Next.js 15, React 19, TypeScript |
+| Category | Technology |
+|----------|------------|
+| **Frontend** | Next.js 15, React, TypeScript |
 | **Styling** | Tailwind CSS, shadcn/ui |
-| **Backend** | Node.js, Express, Socket.io |
+| **Backend** | Node.js, Express, Socket.IO |
 | **Database** | MongoDB Atlas |
 | **File Storage** | Cloudinary |
 | **Deployment** | Vercel (client), Render (server) |
 
-## Architecture
+## Project Structure
 
 ```
-┌─────────────┐     WebSocket      ┌─────────────┐
-│   Client    │◄──────────────────►│   Server    │
-│  (Next.js)  │                    │  (Express)  │
-│   Vercel    │                    │   Render    │
-└─────────────┘                    └──────┬──────┘
-                                          │
-                    ┌─────────────────────┼─────────────────────┐
-                    │                     │                     │
-              ┌─────▼─────┐        ┌──────▼──────┐       ┌──────▼──────┐
-              │  MongoDB  │        │ Cloudinary  │       │   Socket.io │
-              │   Atlas   │        │    CDN      │       │   (Rooms)   │
-              └───────────┘        └─────────────┘       └─────────────┘
+real-time-chat/
+├── apps/
+│   ├── client/          # Next.js frontend
+│   └── server/          # Express + Socket.IO backend
+├── packages/            # Shared packages
+└── turbo.json           # Turborepo config
 ```
 
 ## Quick Start
@@ -46,33 +41,26 @@ Real-time chat application with instant messaging and file sharing.
 # Install dependencies
 npm install
 
-# Run client (localhost:3000)
-cd apps/client && npm run dev
-
-# Run server (localhost:4000)
-cd apps/server && npm run dev
+# Run development servers
+npm run dev
 ```
 
 ## Environment Variables
 
-### Server (Render)
+**Client** (`.env.local`):
 ```
-MONGODB_URI=mongodb+srv://...
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
-ALLOWED_ORIGINS=https://your-domain.vercel.app
+NEXT_PUBLIC_SOCKET_URL=http://localhost:4000
 ```
 
-### Client (Vercel)
+**Server** (`.env`):
 ```
-NEXT_PUBLIC_SOCKET_URL=https://your-server.onrender.com
+PORT=4000
+MONGODB_URI=your_mongodb_connection_string
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-## Author
+## License
 
-**Bikund Kumar**
-
----
-
-Built with ❤️ using Socket.io and Next.js
+MIT
