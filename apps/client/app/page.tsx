@@ -247,6 +247,23 @@ export default function Page() {
     socket.emit('join-room', JSON.stringify({ roomId: inputCode.toUpperCase(), name, userId }));
   };
 
+  const leaveRoom = () => {
+    // Clear session from localStorage
+    localStorage.removeItem('chatRoomCode');
+    localStorage.removeItem('chatUserName');
+
+    // Reset state
+    setConnected(false);
+    setRoomCode('');
+    setMessages([]);
+    setUsers([]);
+    setTypingUsers([]);
+    setMessage('');
+    setSelectedFile(null);
+
+    toast.success('Left the room');
+  };
+
   // Input handlers
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => setInputCode(e.target.value);
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => setName(e.target.value);
@@ -389,6 +406,7 @@ export default function Page() {
                 onRemoveFile={removeSelectedFile}
                 onCameraClick={handleCameraClick}
                 onSubmit={sendMessage}
+                onLeaveRoom={leaveRoom}
               />
             )}
           </CardContent>

@@ -1,6 +1,6 @@
 "use client"
 
-import { Copy } from "lucide-react";
+import { Copy, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { UserList } from './UserList';
@@ -10,9 +10,10 @@ interface RoomHeaderProps {
     roomCode: string;
     users: User[];
     currentUserId: string;
+    onLeaveRoom: () => void;
 }
 
-export function RoomHeader({ roomCode, users, currentUserId }: RoomHeaderProps) {
+export function RoomHeader({ roomCode, users, currentUserId, onLeaveRoom }: RoomHeaderProps) {
     const copyToClipboard = () => {
         navigator.clipboard.write([
             new ClipboardItem({
@@ -38,7 +39,18 @@ export function RoomHeader({ roomCode, users, currentUserId }: RoomHeaderProps) 
                     <Copy className="h-3 w-3" />
                 </Button>
             </div>
-            <UserList users={users} currentUserId={currentUserId} />
+            <div className="flex items-center gap-3">
+                <UserList users={users} currentUserId={currentUserId} />
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onLeaveRoom}
+                    className="h-7 text-muted-foreground hover:text-destructive"
+                >
+                    <LogOut className="h-4 w-4 mr-1" />
+                    Leave
+                </Button>
+            </div>
         </div>
     );
 }

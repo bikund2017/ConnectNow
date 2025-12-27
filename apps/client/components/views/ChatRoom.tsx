@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, ChangeEvent, FormEvent } from 'react';
+import { useRef, useEffect, ChangeEvent, FormEvent } from 'react';
 import { RoomHeader, MessageGroup, TypingIndicator, MessageInput } from '@/components/chat';
 import type { Message, User } from '@/types';
 
@@ -19,6 +19,7 @@ interface ChatRoomProps {
     onRemoveFile: () => void;
     onCameraClick: () => void;
     onSubmit: (_e: FormEvent) => void;
+    onLeaveRoom: () => void;
 }
 
 export function ChatRoom({
@@ -35,9 +36,15 @@ export function ChatRoom({
     onFileSelect,
     onRemoveFile,
     onCameraClick,
-    onSubmit
+    onSubmit,
+    onLeaveRoom
 }: ChatRoomProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll to bottom when new messages arrive
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
     return (
         <div className="max-w-3xl mx-auto space-y-4">
@@ -46,6 +53,7 @@ export function ChatRoom({
                 roomCode={roomCode}
                 users={users}
                 currentUserId={userId}
+                onLeaveRoom={onLeaveRoom}
             />
 
             {/* Messages area */}
