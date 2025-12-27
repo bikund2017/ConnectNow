@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { ServerWakeup } from "@/components/ServerWakeup"
 import { MessageCircleIcon, Loader2, Copy, Paperclip, X, FileIcon, Users, Download } from "lucide-react";
 import { toast } from "sonner"
 
@@ -204,6 +205,7 @@ export default function Page() {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isServerReady, setIsServerReady] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -453,6 +455,17 @@ export default function Page() {
       toast.error('Failed to copy room code');
     });
   };
+
+
+  // Show wakeup screen until server is ready
+  if (!isServerReady) {
+    return (
+      <ServerWakeup
+        socketUrl={SOCKET_URL}
+        onConnected={() => setIsServerReady(true)}
+      />
+    );
+  }
 
   return (
     <>
