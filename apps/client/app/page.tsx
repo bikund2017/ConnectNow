@@ -1,33 +1,55 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useEffect, useState, ChangeEvent, FormEvent, useRef, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ThemeToggle } from "@/components/ui/theme-toggle"
-import { ServerWakeup } from "@/components/ServerWakeup"
+import * as React from "react";
+import {
+  useEffect,
+  useState,
+  ChangeEvent,
+  FormEvent,
+  useRef,
+  useCallback,
+} from "react";
+import { io, Socket } from "socket.io-client";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ServerWakeup } from "@/components/ServerWakeup";
 import { MessageCircleIcon } from "lucide-react";
-import { toast } from "sonner"
-import { CameraModal } from "@/components/CameraModal"
-import { LobbyView, ChatRoom } from "@/components/views"
-import type { Message, User, FileData, ServerToClientEvents, ClientToServerEvents } from '@/types';
+import { toast } from "sonner";
+import { CameraModal } from "@/components/CameraModal";
+import { LobbyView, ChatRoom } from "@/components/views";
+import type {
+  Message,
+  User,
+  FileData,
+  ServerToClientEvents,
+  ClientToServerEvents,
+} from "@/types";
 
-const SOCKET_URL = (process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000').replace(/\/$/, '');
-const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SOCKET_URL);
+const SOCKET_URL = (
+  process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000"
+).replace(/\/$/, "");
+const socket: Socket<ServerToClientEvents, ClientToServerEvents> =
+  io(SOCKET_URL);
 
 export default function Page() {
   // Room state
-  const [roomCode, setRoomCode] = useState<string>('');
-  const [inputCode, setInputCode] = useState<string>('');
+  const [roomCode, setRoomCode] = useState<string>("");
+  const [inputCode, setInputCode] = useState<string>("");
   const [connected, setConnected] = useState<boolean>(false);
 
   // User state
   const [name, setName] = useState<string>("");
-  const [userId, setUserId] = useState<string>('');
+  const [userId, setUserId] = useState<string>("");
   const [users, setUsers] = useState<User[]>([]);
 
   // Message state
-  const [message, setMessage] = useState<string>('');
+  const [message, setMessage] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
 
@@ -50,7 +72,10 @@ export default function Page() {
   useEffect(() => {
     const checkMobile = () => {
       const userAgent = navigator.userAgent || navigator.vendor;
-      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+      const isMobileDevice =
+        /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+          userAgent.toLowerCase()
+        );
       setIsMobile(isMobileDevice);
     };
     checkMobile();
@@ -58,7 +83,7 @@ export default function Page() {
 
   // Scroll to bottom on new messages
   useEffect(() => {
-    const messagesContainer = document.querySelector('.messages-container');
+    const messagesContainer = document.querySelector(".messages-container");
     if (messagesContainer) {
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
@@ -66,28 +91,31 @@ export default function Page() {
 
   // Initialize user ID and check for saved session
   useEffect(() => {
-    const storedUserId = localStorage.getItem('chatUserId');
+    const storedUserId = localStorage.getItem("chatUserId");
     const newUserId = storedUserId || crypto.randomUUID();
 
     if (!storedUserId) {
-      localStorage.setItem('chatUserId', newUserId);
+      localStorage.setItem("chatUserId", newUserId);
     }
 
     setUserId(newUserId);
 
     // Check for saved room session (auto-rejoin)
-    const savedRoom = localStorage.getItem('chatRoomCode');
-    const savedName = localStorage.getItem('chatUserName');
+    const savedRoom = localStorage.getItem("chatRoomCode");
+    const savedName = localStorage.getItem("chatUserName");
 
     if (savedRoom && savedName) {
       setName(savedName);
       setInputCode(savedRoom);
       setTimeout(() => {
-        socket.emit('join-room', JSON.stringify({
-          roomId: savedRoom.toUpperCase(),
-          name: savedName,
-          userId: newUserId
-        }));
+        socket.emit(
+          "join-room",
+          JSON.stringify({
+            roomId: savedRoom.toUpperCase(),
+            name: savedName,
+            userId: newUserId,
+          })
+        );
       }, 500);
     }
   }, []);
@@ -95,32 +123,35 @@ export default function Page() {
   // Handle socket reconnection
   useEffect(() => {
     const rejoinRoom = () => {
-      const savedRoom = localStorage.getItem('chatRoomCode');
-      const savedName = localStorage.getItem('chatUserName');
-      const savedUserId = localStorage.getItem('chatUserId');
+      const savedRoom = localStorage.getItem("chatRoomCode");
+      const savedName = localStorage.getItem("chatUserName");
+      const savedUserId = localStorage.getItem("chatUserId");
 
       if (savedRoom && savedName && savedUserId && socket.connected) {
-        socket.emit('join-room', JSON.stringify({
-          roomId: savedRoom.toUpperCase(),
-          name: savedName,
-          userId: savedUserId
-        }));
+        socket.emit(
+          "join-room",
+          JSON.stringify({
+            roomId: savedRoom.toUpperCase(),
+            name: savedName,
+            userId: savedUserId,
+          })
+        );
       }
     };
 
-    socket.on('connect', rejoinRoom);
+    socket.on("connect", rejoinRoom);
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         setTimeout(rejoinRoom, 500);
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      socket.off('connect', rejoinRoom);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      socket.off("connect", rejoinRoom);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
@@ -130,7 +161,7 @@ export default function Page() {
 
     if (!isTypingRef.current) {
       isTypingRef.current = true;
-      socket.emit('typing-start', { roomCode });
+      socket.emit("typing-start", { roomCode });
     }
 
     if (typingTimeoutRef.current) {
@@ -139,69 +170,72 @@ export default function Page() {
 
     typingTimeoutRef.current = setTimeout(() => {
       isTypingRef.current = false;
-      socket.emit('typing-stop', { roomCode });
+      socket.emit("typing-stop", { roomCode });
     }, 2000);
   }, [connected, roomCode]);
 
   // Socket event handlers
   useEffect(() => {
-    socket.on('room-created', (code) => {
+    socket.on("room-created", (code) => {
       setRoomCode(code);
       setIsLoading(false);
       isCreatingRoomRef.current = false;
-      toast.success('Room created successfully!');
+      toast.success("Room created successfully!");
     });
 
-    socket.on('joined-room', ({ roomCode, messages }) => {
+    socket.on("joined-room", ({ roomCode, messages }) => {
       setRoomCode(roomCode);
       setMessages(messages);
       setConnected(true);
-      setInputCode('');
-      localStorage.setItem('chatRoomCode', roomCode);
-      localStorage.setItem('chatUserName', name || localStorage.getItem('chatUserName') || '');
-      toast.success('Joined room successfully!');
+      setInputCode("");
+      localStorage.setItem("chatRoomCode", roomCode);
+      localStorage.setItem(
+        "chatUserName",
+        name || localStorage.getItem("chatUserName") || ""
+      );
+      toast.success("Joined room successfully!");
     });
 
-    socket.on('new-message', (message) => {
+    socket.on("new-message", (message) => {
       setMessages((prev) => [...prev, message]);
     });
 
-    socket.on('user-joined', ({ users }) => {
+    socket.on("user-joined", ({ users }) => {
       setUsers(users);
     });
 
-    socket.on('user-left', ({ users }) => {
+    socket.on("user-left", ({ users }) => {
       setUsers(users);
     });
 
-    socket.on('typing-update', ({ typingUsers }) => {
+    socket.on("typing-update", ({ typingUsers }) => {
       setTypingUsers(typingUsers);
     });
 
-    socket.on('users-update', ({ users }) => {
+    socket.on("users-update", ({ users }) => {
       setUsers(users);
     });
 
-    socket.on('error', (error) => {
+    socket.on("error", (error) => {
       toast.error(error);
       setIsLoading(false);
       isCreatingRoomRef.current = false;
-      if (error === 'Room not found' || error === 'Room is full') {
-        setInputCode('');
-        localStorage.removeItem('chatRoomCode');
-        localStorage.removeItem('chatUserName');
+      if (error === "Room not found" || error === "Room is full") {
+        setInputCode("");
+        localStorage.removeItem("chatRoomCode");
+        localStorage.removeItem("chatUserName");
       }
     });
 
     return () => {
-      socket.off('room-created');
-      socket.off('joined-room');
-      socket.off('new-message');
-      socket.off('user-joined');
-      socket.off('user-left');
-      socket.off('typing-update');
-      socket.off('users-update');
-      socket.off('error');
+      socket.off("room-created");
+      socket.off("joined-room");
+      socket.off("new-message");
+      socket.off("user-joined");
+      socket.off("user-left");
+      socket.off("typing-update");
+      socket.off("users-update");
+      socket.off("error");
     };
   }, [name]);
 
@@ -220,7 +254,7 @@ export default function Page() {
           isCreatingRoomRef.current = true;
           setIsWakingServer(false);
           setIsLoading(true);
-          socket.emit('create-room');
+          socket.emit("create-room");
         }
       }, 100);
       setTimeout(() => clearInterval(checkConnection), 5000);
@@ -230,43 +264,48 @@ export default function Page() {
     isCreatingRoomRef.current = true;
     setIsWakingServer(false);
     setIsLoading(true);
-    socket.emit('create-room');
+    socket.emit("create-room");
   };
 
   const joinRoom = () => {
     if (!inputCode.trim()) {
-      toast.error('Please enter a room code');
+      toast.error("Please enter a room code");
       return;
     }
 
     if (!name.trim()) {
-      toast.error('Please enter your name');
+      toast.error("Please enter your name");
       return;
     }
 
-    socket.emit('join-room', JSON.stringify({ roomId: inputCode.toUpperCase(), name, userId }));
+    socket.emit(
+      "join-room",
+      JSON.stringify({ roomId: inputCode.toUpperCase(), name, userId })
+    );
   };
 
   const leaveRoom = () => {
     // Clear session from localStorage
-    localStorage.removeItem('chatRoomCode');
-    localStorage.removeItem('chatUserName');
+    localStorage.removeItem("chatRoomCode");
+    localStorage.removeItem("chatUserName");
 
     // Reset state
     setConnected(false);
-    setRoomCode('');
+    setRoomCode("");
     setMessages([]);
     setUsers([]);
     setTypingUsers([]);
-    setMessage('');
+    setMessage("");
     setSelectedFile(null);
 
-    toast.success('Left the room');
+    toast.success("Left the room");
   };
 
   // Input handlers
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => setInputCode(e.target.value);
-  const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => setName(e.target.value);
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) =>
+    setInputCode(e.target.value);
+  const handleNameChange = (e: ChangeEvent<HTMLInputElement>) =>
+    setName(e.target.value);
   const handleMessageChange = (e: ChangeEvent<HTMLInputElement>) => {
     setMessage(e.target.value);
     handleTyping();
@@ -276,7 +315,7 @@ export default function Page() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        toast.error('File size must be less than 10MB');
+        toast.error("File size must be less than 10MB");
         return;
       }
       setSelectedFile(file);
@@ -286,25 +325,25 @@ export default function Page() {
   const handleCameraClick = () => setIsCameraOpen(true);
   const handleCameraCapture = (file: File) => {
     setSelectedFile(file);
-    toast.success('Photo captured!');
+    toast.success("Photo captured!");
   };
   const removeSelectedFile = () => setSelectedFile(null);
 
   // File upload
   const uploadFile = async (file: File): Promise<FileData | null> => {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     try {
       const response = await fetch(`${SOCKET_URL}/upload`, {
-        method: 'POST',
+        method: "POST",
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Upload failed');
+      if (!response.ok) throw new Error("Upload failed");
       return await response.json();
     } catch {
-      toast.error('Failed to upload file');
+      toast.error("Failed to upload file");
       return null;
     }
   };
@@ -318,7 +357,7 @@ export default function Page() {
       clearTimeout(typingTimeoutRef.current);
     }
     isTypingRef.current = false;
-    socket.emit('typing-stop', { roomCode });
+    socket.emit("typing-stop", { roomCode });
 
     let fileData: FileData | undefined;
 
@@ -334,15 +373,15 @@ export default function Page() {
       }
     }
 
-    socket.emit('send-message', {
+    socket.emit("send-message", {
       roomCode,
-      message: message.trim() || (fileData ? fileData.name : ''),
+      message: message.trim() || (fileData ? fileData.name : ""),
       userId,
       name,
-      file: fileData
+      file: fileData,
     });
 
-    setMessage('');
+    setMessage("");
     setSelectedFile(null);
   };
 
@@ -350,10 +389,7 @@ export default function Page() {
     <>
       {/* Server Wake-up Screen */}
       {isWakingServer && (
-        <ServerWakeup
-          socketUrl={SOCKET_URL}
-          onConnected={handleServerReady}
-        />
+        <ServerWakeup socketUrl={SOCKET_URL} onConnected={handleServerReady} />
       )}
 
       {/* Camera Modal */}
