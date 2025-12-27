@@ -7,7 +7,7 @@ import { Camera, X, SwitchCamera, Loader2 } from "lucide-react";
 interface CameraModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCapture: (file: File) => void;
+    onCapture: (_file: File) => void;
 }
 
 export function CameraModal({ isOpen, onClose, onCapture }: CameraModalProps) {

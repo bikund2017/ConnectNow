@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useEffect, useState, ChangeEvent, FormEvent, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import Image from 'next/image';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -44,23 +45,23 @@ interface User {
 }
 
 interface ServerToClientEvents {
-  'room-created': (code: string) => void;
-  'joined-room': (data: { roomCode: string; messages: Message[]; roomName?: string }) => void;
-  'new-message': (message: Message) => void;
-  'user-joined': (data: { userCount: number; user: User; users: User[] }) => void;
-  'user-left': (data: { userCount: number; users: User[] }) => void;
-  'typing-update': (data: { typingUsers: string[] }) => void;
-  'users-update': (data: { users: User[] }) => void;
-  error: (message: string) => void;
+  'room-created': (_code: string) => void;
+  'joined-room': (_data: { roomCode: string; messages: Message[]; roomName?: string }) => void;
+  'new-message': (_message: Message) => void;
+  'user-joined': (_data: { userCount: number; user: User; users: User[] }) => void;
+  'user-left': (_data: { userCount: number; users: User[] }) => void;
+  'typing-update': (_data: { typingUsers: string[] }) => void;
+  'users-update': (_data: { users: User[] }) => void;
+  error: (_message: string) => void;
 }
 
 interface ClientToServerEvents {
-  'create-room': (data?: { name?: string; description?: string }) => void;
-  'join-room': (roomCode: string) => void;
-  'send-message': (data: { roomCode: string; message: string; userId: string; name: string; file?: FileData }) => void;
-  'typing-start': (data: { roomCode: string }) => void;
-  'typing-stop': (data: { roomCode: string }) => void;
-  'get-users': (data: { roomCode: string }) => void;
+  'create-room': (_data?: { name?: string; description?: string }) => void;
+  'join-room': (_roomCode: string) => void;
+  'send-message': (_data: { roomCode: string; message: string; userId: string; name: string; file?: FileData }) => void;
+  'typing-start': (_data: { roomCode: string }) => void;
+  'typing-stop': (_data: { roomCode: string }) => void;
+  'get-users': (_data: { roomCode: string }) => void;
 }
 
 const SOCKET_URL = (process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000').replace(/\/$/, '');
@@ -95,12 +96,14 @@ const FileMessage = ({ file, isOwn }: { file: FileData; isOwn: boolean }) => {
 
   if (isImage) {
     return (
-      <div className="max-w-xs rounded-lg overflow-hidden">
-        <img
+      <div className="max-w-xs rounded-lg overflow-hidden relative">
+        <Image
           src={fileUrl}
           alt={file.name}
+          width={320}
+          height={240}
           className="max-w-full h-auto rounded-lg"
-          loading="lazy"
+          unoptimized
         />
         <div className="text-xs opacity-70 mt-1">{file.name}</div>
       </div>
@@ -219,7 +222,7 @@ export default function Page() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
   const isCreatingRoomRef = useRef(false); // Guard to prevent duplicate room creation
 

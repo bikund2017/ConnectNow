@@ -11,6 +11,10 @@ const nextConfig = {
         hostname: '**.onrender.com',
       },
       {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
+      {
         protocol: 'http',
         hostname: 'localhost',
       },
