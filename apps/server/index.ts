@@ -319,16 +319,34 @@ io.on('connection', (socket) => {
       }
     }
 
-    // Create user profile
+    // Check if this user is reconnecting (same userId, different socket)
+    let existingUser: User | undefined;
+    let oldSocketId: string | undefined;
+    for (const [socketId, u] of room.users) {
+      if (u.id === userId) {
+        existingUser = u;
+        oldSocketId = socketId;
+        break;
+      }
+    }
+
+    const isReconnecting = !!existingUser;
+
+    // Create or update user profile
     const user: User = {
       id: userId,
       socketId: socket.id,
       name: userName,
       status: 'online',
-      joinedAt: new Date()
+      joinedAt: existingUser?.joinedAt || new Date()
     };
 
     socket.join(roomCode);
+
+    // If reconnecting, remove old socket entry
+    if (oldSocketId) {
+      room.users.delete(oldSocketId);
+    }
     room.users.set(socket.id, user);
     room.lastActive = Date.now();
 
@@ -340,7 +358,7 @@ io.on('connection', (socket) => {
       roomDescription: room.description
     });
 
-    // Notify others about new user
+    // Notify others about user update
     const usersList = Array.from(room.users.values());
     io.to(roomCode).emit('user-joined', {
       userCount: room.users.size,
@@ -348,20 +366,22 @@ io.on('connection', (socket) => {
       users: usersList.map(u => ({ id: u.id, name: u.name, status: u.status }))
     });
 
-    // Add system message
-    const systemMessage: MessageData = {
-      id: randomBytes(4).toString('hex'),
-      content: `${userName} joined the room`,
-      senderId: 'system',
-      sender: 'System',
-      timestamp: new Date(),
-      type: 'system'
-    };
-    room.messages.push(systemMessage);
-    await saveMessageToDb(roomCode, systemMessage);
-    io.to(roomCode).emit('new-message', systemMessage);
+    // Only add system message for new users, not reconnections
+    if (!isReconnecting) {
+      const systemMessage: MessageData = {
+        id: randomBytes(4).toString('hex'),
+        content: `${userName} joined the room`,
+        senderId: 'system',
+        sender: 'System',
+        timestamp: new Date(),
+        type: 'system'
+      };
+      room.messages.push(systemMessage);
+      await saveMessageToDb(roomCode, systemMessage);
+      io.to(roomCode).emit('new-message', systemMessage);
+    }
 
-    console.log(`User ${userName} joined room ${roomCode}`);
+    console.log(`User ${userName} ${isReconnecting ? 'reconnected to' : 'joined'} room ${roomCode}`);
   });
 
   // Send a message

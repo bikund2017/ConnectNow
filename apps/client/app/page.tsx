@@ -256,6 +256,30 @@ export default function Page() {
     }
   }, []);
 
+  // Handle socket reconnection - automatically rejoin room
+  useEffect(() => {
+    const handleReconnect = () => {
+      const savedRoom = localStorage.getItem('chatRoomCode');
+      const savedName = localStorage.getItem('chatUserName');
+      const savedUserId = localStorage.getItem('chatUserId');
+      
+      if (savedRoom && savedName && savedUserId) {
+        console.log('Socket reconnected, rejoining room:', savedRoom);
+        socket.emit('join-room', JSON.stringify({
+          roomId: savedRoom.toUpperCase(),
+          name: savedName,
+          userId: savedUserId
+        }));
+      }
+    };
+
+    socket.on('connect', handleReconnect);
+
+    return () => {
+      socket.off('connect', handleReconnect);
+    };
+  }, []);
+
   // Handle typing events with debounce
   const handleTyping = useCallback(() => {
     if (!connected || !roomCode) return;
