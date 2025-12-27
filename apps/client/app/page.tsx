@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { CameraModal } from "@/components/CameraModal"
 
 // Types
 interface FileData {
@@ -212,12 +213,24 @@ export default function Page() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isWakingServer, setIsWakingServer] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isTypingRef = useRef(false);
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor;
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+      setIsMobile(isMobileDevice);
+    };
+    checkMobile();
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -262,7 +275,7 @@ export default function Page() {
       const savedRoom = localStorage.getItem('chatRoomCode');
       const savedName = localStorage.getItem('chatUserName');
       const savedUserId = localStorage.getItem('chatUserId');
-      
+
       if (savedRoom && savedName && savedUserId) {
         console.log('Socket reconnected, rejoining room:', savedRoom);
         socket.emit('join-room', JSON.stringify({
@@ -412,6 +425,23 @@ export default function Page() {
     }
   };
 
+  // Handle camera button click - use native input on mobile, modal on desktop
+  const handleCameraClick = () => {
+    if (isMobile) {
+      // On mobile, use native camera input
+      cameraInputRef.current?.click();
+    } else {
+      // On desktop, open camera modal
+      setIsCameraOpen(true);
+    }
+  };
+
+  // Handle capture from CameraModal (desktop)
+  const handleCameraCapture = (file: File) => {
+    setSelectedFile(file);
+    toast.success('Photo captured!');
+  };
+
   const removeSelectedFile = () => {
     setSelectedFile(null);
     if (fileInputRef.current) {
@@ -503,6 +533,13 @@ export default function Page() {
           onConnected={handleServerReady}
         />
       )}
+
+      {/* Camera Modal - for desktop webcam capture */}
+      <CameraModal
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={handleCameraCapture}
+      />
       <div className="fixed top-4 right-4 z-50">
         <ThemeToggle />
       </div>
@@ -649,7 +686,7 @@ export default function Page() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" side="top">
-                      <DropdownMenuItem onClick={() => cameraInputRef.current?.click()}>
+                      <DropdownMenuItem onClick={handleCameraClick}>
                         <Camera className="h-4 w-4 mr-2" />
                         Capture with Camera
                       </DropdownMenuItem>
