@@ -205,7 +205,7 @@ export default function Page() {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isServerReady, setIsServerReady] = useState(false);
+  const [isWakingServer, setIsWakingServer] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -333,6 +333,12 @@ export default function Page() {
   }, []);
 
   const createRoom = () => {
+    // Trigger the wakeup screen which will ping the server and create room when ready
+    setIsWakingServer(true);
+  };
+
+  const handleServerReady = () => {
+    setIsWakingServer(false);
     setIsLoading(true);
     socket.emit('create-room');
   };
@@ -457,18 +463,15 @@ export default function Page() {
   };
 
 
-  // Show wakeup screen until server is ready
-  if (!isServerReady) {
-    return (
-      <ServerWakeup
-        socketUrl={SOCKET_URL}
-        onConnected={() => setIsServerReady(true)}
-      />
-    );
-  }
-
   return (
     <>
+      {/* Server Wake-up Screen - shown when creating room */}
+      {isWakingServer && (
+        <ServerWakeup
+          socketUrl={SOCKET_URL}
+          onConnected={handleServerReady}
+        />
+      )}
       <div className="fixed top-4 right-4 z-50">
         <ThemeToggle />
       </div>
