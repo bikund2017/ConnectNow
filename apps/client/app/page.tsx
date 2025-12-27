@@ -271,13 +271,13 @@ export default function Page() {
 
   // Handle socket reconnection - automatically rejoin room
   useEffect(() => {
-    const handleReconnect = () => {
+    const rejoinRoom = () => {
       const savedRoom = localStorage.getItem('chatRoomCode');
       const savedName = localStorage.getItem('chatUserName');
       const savedUserId = localStorage.getItem('chatUserId');
 
-      if (savedRoom && savedName && savedUserId) {
-        console.log('Socket reconnected, rejoining room:', savedRoom);
+      if (savedRoom && savedName && savedUserId && socket.connected) {
+        console.log('Rejoining room:', savedRoom);
         socket.emit('join-room', JSON.stringify({
           roomId: savedRoom.toUpperCase(),
           name: savedName,
@@ -286,10 +286,22 @@ export default function Page() {
       }
     };
 
-    socket.on('connect', handleReconnect);
+    // Handle socket connect/reconnect events
+    socket.on('connect', rejoinRoom);
+    
+    // Handle page visibility change (mobile user returns to app)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Small delay to ensure socket is ready
+        setTimeout(rejoinRoom, 500);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      socket.off('connect', handleReconnect);
+      socket.off('connect', rejoinRoom);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
