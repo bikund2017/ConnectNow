@@ -245,13 +245,16 @@ export default function Page() {
   };
 
   const handleServerReady = () => {
-    if (isCreatingRoomRef.current) return;
+    // Early guard: prevent multiple calls
+    if (isCreatingRoomRef.current || isLoading) return;
+
+    // Set the ref immediately to prevent race conditions
+    isCreatingRoomRef.current = true;
 
     if (!socket.connected) {
       const checkConnection = setInterval(() => {
-        if (socket.connected && !isCreatingRoomRef.current) {
+        if (socket.connected) {
           clearInterval(checkConnection);
-          isCreatingRoomRef.current = true;
           setIsWakingServer(false);
           setIsLoading(true);
           socket.emit("create-room");
@@ -261,7 +264,6 @@ export default function Page() {
       return;
     }
 
-    isCreatingRoomRef.current = true;
     setIsWakingServer(false);
     setIsLoading(true);
     socket.emit("create-room");
