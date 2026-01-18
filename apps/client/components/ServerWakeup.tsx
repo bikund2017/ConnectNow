@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { MessageCircleIcon, Coffee, Zap } from "lucide-react";
 
 interface ServerWakeupProps {
@@ -14,6 +14,7 @@ export function ServerWakeup({ onConnected, socketUrl }: ServerWakeupProps) {
   );
   const [elapsedTime, setElapsedTime] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
+  const hasCalledOnConnected = useRef(false);
 
   const tips = [
     "Free tier servers sleep after 15 minutes of inactivity",
@@ -45,6 +46,14 @@ export function ServerWakeup({ onConnected, socketUrl }: ServerWakeupProps) {
     }
   }, [elapsedTime, status]);
 
+  // Memoize the callback to prevent effect re-runs
+  const handleConnected = useCallback(() => {
+    if (!hasCalledOnConnected.current) {
+      hasCalledOnConnected.current = true;
+      onConnected();
+    }
+  }, [onConnected]);
+
   // Health check ping
   useEffect(() => {
     const checkServer = async () => {
@@ -53,9 +62,9 @@ export function ServerWakeup({ onConnected, socketUrl }: ServerWakeupProps) {
           method: "GET",
           mode: "cors",
         });
-        if (response.ok) {
+        if (response.ok && !hasCalledOnConnected.current) {
           setStatus("ready");
-          setTimeout(onConnected, 500); // Short delay for animation
+          setTimeout(handleConnected, 500); // Short delay for animation
         }
       } catch {
         // Server still waking up, will retry
@@ -75,7 +84,7 @@ export function ServerWakeup({ onConnected, socketUrl }: ServerWakeupProps) {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [socketUrl, onConnected]);
+  }, [socketUrl, handleConnected]);
 
   return (
     <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
