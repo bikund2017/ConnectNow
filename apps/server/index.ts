@@ -168,7 +168,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-//  File Upload Setup 
+//  File Upload Setup
 // Use memory storage - files are uploaded to Cloudinary, not stored locally
 const storage = multer.memoryStorage();
 
@@ -236,7 +236,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-//  Helper Functions 
+//  Helper Functions
 async function saveMessageToDb(roomCode: string, message: MessageData) {
   if (mongoose.connection.readyState !== 1) return;
   try {
